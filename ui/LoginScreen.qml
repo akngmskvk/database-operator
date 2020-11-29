@@ -4,6 +4,14 @@ import QtQuick.Controls.Styles 1.4
 
 Item {
     id: loginScreen
+
+    property bool isAuth: false
+
+    onIsAuthChanged: {
+        if (isAuth)
+            slMain.currentIndex = 1
+    }
+
     Rectangle {
         id: background
         color: "#8c7f69"
@@ -42,8 +50,18 @@ Item {
             text: "Login"
             onClicked: {
                 authentication.authenticate(usernameInput.text, passwordInput.text)
-                authentication.isAuth() ? console.log("success") : console.log("fail")
+                isAuth = authentication.isAuth()
+                if (loginScreen.isAuth == false)
+                    failedTxt.visible = true
             }
+        }
+        Text {
+            id: failedTxt
+            visible: false
+            text: qsTr("Login attempt failed!")
+            color: "red"
+            anchors.horizontalCenter: parent.horizontalCenter
+            font.pixelSize: 20
         }
     }
 }

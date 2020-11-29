@@ -1,5 +1,6 @@
 import QtQuick 2.13
 import QtQuick.Window 2.13
+import QtQuick.Layouts 1.15
 
 import Authentication 1.0
 
@@ -16,10 +17,18 @@ Window {
         id: authentication
     }
 
-    LoginScreen {
-        width: 400
-        height: 300
-        anchors.centerIn: parent
+    StackLayout {
+        id: slMain
+        anchors.fill: parent
+        currentIndex: 0
+        LoginScreen {
+            id: loginScreen
+            width: 400
+            height: 300
+        }
+        DatabaseListScreen {
+            id: databaseListScreen
+        }
     }
 
 }
