@@ -36,6 +36,7 @@ Item {
         }
         TextField {
             id: passwordInput
+            echoMode: TextInput.Password
             width: 200
             height: 40
             placeholderText: "Password(hint: admin)"
