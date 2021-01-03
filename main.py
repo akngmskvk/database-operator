@@ -178,6 +178,34 @@ for table_name in table_names_list:
 neo4j.close()
 # End of Neo4j operations
 
+def create_dmmm_outline():
+    neo4j.create_node("DATA MODEL", "DATA_MODEL")
+    neo4j.create_node("DATA MODEL ENTITY", "DATA_MODEL_ENTITY")
+    neo4j.create_relationship("DATA MODEL", "DATA_MODEL", "DATA MODEL ENTITY", "DATA_MODEL_ENTITY", "DefinesBusinessContextFor")
+    neo4j.create_node("ENTITY", "ENTITY")
+    neo4j.create_relationship("ENTITY", "ENTITY", "DATA MODEL ENTITY", "DATA_MODEL_ENTITY", "HasItsBusinessContext")
+    neo4j.create_node("RELATIONSHIP", "RELATIONSHIP")
+    neo4j.create_relationship("ENTITY", "ENTITY", "RELATIONSHIP", "RELATIONSHIP", "RepresentsDominantEnd")
+    neo4j.create_relationship("ENTITY", "ENTITY", "RELATIONSHIP", "RELATIONSHIP", "RepresentsDependentEnd")
+    neo4j.create_node("ATTRIBUTE", "ATTRIBUTE")
+    neo4j.create_relationship("ENTITY", "ENTITY", "ATTRIBUTE", "ATTRIBUTE", "HasItsProperties")
+    neo4j.create_node("FOREIGN IDENTIFIER", "FOREIGN_IDENTIFIER")
+    neo4j.create_relationship("ATTRIBUTE", "ATTRIBUTE", "FOREIGN IDENTIFIER", "FOREIGN_IDENTIFIER", "ContributesTo")
+    neo4j.create_relationship("FOREIGN IDENTIFIER", "FOREIGN_IDENTIFIER", "RELATIONSHIP", "RELATIONSHIP", "ProvidesThePath")
+    neo4j.create_node("DOMAIN", "DOMAIN")
+    neo4j.create_relationship("ATTRIBUTE", "ATTRIBUTE", "DOMAIN", "DOMAIN", "ConstrainsTheValuesOf")
+    neo4j.create_relationship("DOMAIN", "DOMAIN", "ATTRIBUTE", "ATTRIBUTE", "HasTheSetOf")
+    neo4j.create_node("ATTRIBUTE TYPE", "ATTRIBUTE_TYPE")
+    neo4j.create_relationship("ATTRIBUTE TYPE", "ATTRIBUTE_TYPE", "DOMAIN", "DOMAIN", "ConstrainsTheGenericNatureOf")
+    neo4j.create_relationship("ATTRIBUTE TYPE", "ATTRIBUTE_TYPE", "ATTRIBUTE", "ATTRIBUTE", "ConstrainsTheGenericNatureOf")
+    neo4j.create_node("IDENTIFIER", "IDENTIFIER")
+    neo4j.create_relationship("ATTRIBUTE", "ATTRIBUTE", "IDENTIFIER", "IDENTIFIER", "FormsTheComponent")
+    neo4j.create_relationship("ENTITY", "ENTITY", "IDENTIFIER", "IDENTIFIER", "IdentifiedBy")
+    neo4j.create_node("KEY ATTRIBUTE", "KEY_ATTRIBUTE")
+    neo4j.create_relationship("KEY ATTRIBUTE", "KEY_ATTRIBUTE", "ATTRIBUTE", "ATTRIBUTE", "IsAn")
+    neo4j.create_relationship("IDENTIFIER", "IDENTIFIER", "KEY ATTRIBUTE", "KEY_ATTRIBUTE", "IsComposedOf")
+
+
 if __name__ == "__main__":
     app = QGuiApplication(sys.argv)
     qmlRegisterType(Authentication, 'Authentication', 1, 0, 'Authentication')
