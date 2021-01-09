@@ -138,50 +138,71 @@ foreign_key_model = QStringListModel()
 # Beginning of Neo4j operations
 neo4j = Neo4jOperations("bolt://localhost:7687", "neo4j", "123456")
 
-mainNodeName = "chinook_DMM"
-mainNodeType = "Database"
-tableNodeType = "Table"
-columnNodeType = "Column"
-dbToTableRelationship = "hasTable"
-tableToColumnRelationship = "hasColumn"
-columnToColumnForeignKeyRelationship = "FK"
+neo4j.create_node("Chinook", "DATA_MODEL")
 
-neo4j.create_node(mainNodeName, mainNodeType)
+for entity_name in table_names_list:
+    # create entity to neo4j
+    neo4j.create_node(entity_name, "ENTITY")
+    # create relationship between data model and entity
+    neo4j.create_relationship("Chinook", "DATA_MODEL", entity_name, "ENTITY", "HAS_ENTITY")
 
-for table_name in table_names_list:
-    # add table names to neo4j
-    neo4j.create_node(table_name, tableNodeType)
-    neo4j.create_relationship(mainNodeName, mainNodeType, table_name, tableNodeType, dbToTableRelationship)
-
-for table_name in table_names_list:
-    # add column names and their types to neo4j
-    rows = dbOperations.select_all_column_names_and_types(table_name)
+for entity_name in table_names_list:
+    rows = dbOperations.select_all_column_names_and_types(entity_name)
     for row in rows:
-        column_name = str(row[1])
-        column_type = str(row[2])
-        neo4j.create_column_node(column_name, table_name, column_type)
-        neo4j.create_relationship_table_to_column(table_name, tableNodeType, column_name, table_name,
-                                                  tableToColumnRelationship)
+        attribute_name = str(row[1])
+        attribute_type = str(row[2])
+        is_attribute_pk = int(row[5])
 
-for table_name in table_names_list:
-    # add foreign key relationship between column names to neo4j
-    rows = dbOperations.select_all_foreign_keys(table_name)
+        # create attribute with attr type and its related entity
+        neo4j.create_attribute_node(attribute_name, attribute_type, entity_name)
+        # create relationship between entity and its attribute
+        query = """
+                MATCH (a:ENTITY), (b:ATTRIBUTE)
+                WHERE a.name='%s' AND b.entity='%s'
+                MERGE  (a)-[:%s]->(b)
+                """ % (entity_name, entity_name, "HAS_ATTRIBUTE")
+        neo4j.run_custom_query(query)
+
+        if is_attribute_pk:
+            # create key attribute with its related entity
+            neo4j.create_key_attribute_node(attribute_name, entity_name)
+            # create relationship between attribute and key attribute
+            query = """
+                    MATCH (a:KEY_ATTRIBUTE), (b:ATTRIBUTE)
+                    WHERE a.name=b.name AND a.entity=b.entity
+                    MERGE  (a)-[:IS_AN]->(b)
+                    """
+            neo4j.run_custom_query(query)
+
+    # find foreign identifier attributes
+    rows = dbOperations.select_all_foreign_keys(entity_name)
     for row in rows:
-        from_column_name = str(row[3])
-        from_table_name = table_name
-        to_column_name = str(row[4])
-        to_table_name = str(row[2])
+        from_entity = entity_name
+        to_entity = str(row[2])
+        from_attribute = str(row[3])
+        to_attribute = str(row[4])
 
-        neo4j.create_relationship_column_to_column_fk(from_column_name, from_table_name, to_column_name,
-                                                      to_table_name, columnToColumnForeignKeyRelationship)
+        # create foreign identifier attribute with from-to entity name and from-to attr name
+        neo4j.create_fia_node(from_attribute, from_entity, to_entity, from_attribute, to_attribute)
+        # create relationship between attribute and foreign identifier attribute
+        query = """
+                MATCH (a:ATTRIBUTE), (b:FOREIGN_IDENTIFIER_ATTRIBUTE)
+                WHERE a.name=b.name AND a.entity=b.from_entity
+                MERGE  (a)-[:DEFINES_FOREIGN_KEY]->(b)
+                """
+        neo4j.run_custom_query(query)
 
 neo4j.close()
 # End of Neo4j operations
 
+
 def create_dmmm_outline():
+    neo4j = Neo4jOperations("bolt://localhost:7687", "neo4j", "123456")
+
     neo4j.create_node("DATA MODEL", "DATA_MODEL")
     neo4j.create_node("DATA MODEL ENTITY", "DATA_MODEL_ENTITY")
-    neo4j.create_relationship("DATA MODEL", "DATA_MODEL", "DATA MODEL ENTITY", "DATA_MODEL_ENTITY", "DefinesBusinessContextFor")
+    neo4j.create_relationship("DATA MODEL", "DATA_MODEL", "DATA MODEL ENTITY", "DATA_MODEL_ENTITY",
+                              "DefinesBusinessContextFor")
     neo4j.create_node("ENTITY", "ENTITY")
     neo4j.create_relationship("ENTITY", "ENTITY", "DATA MODEL ENTITY", "DATA_MODEL_ENTITY", "HasItsBusinessContext")
     neo4j.create_node("RELATIONSHIP", "RELATIONSHIP")
@@ -191,19 +212,32 @@ def create_dmmm_outline():
     neo4j.create_relationship("ENTITY", "ENTITY", "ATTRIBUTE", "ATTRIBUTE", "HasItsProperties")
     neo4j.create_node("FOREIGN IDENTIFIER", "FOREIGN_IDENTIFIER")
     neo4j.create_relationship("ATTRIBUTE", "ATTRIBUTE", "FOREIGN IDENTIFIER", "FOREIGN_IDENTIFIER", "ContributesTo")
-    neo4j.create_relationship("FOREIGN IDENTIFIER", "FOREIGN_IDENTIFIER", "RELATIONSHIP", "RELATIONSHIP", "ProvidesThePath")
+    neo4j.create_relationship("FOREIGN IDENTIFIER", "FOREIGN_IDENTIFIER", "RELATIONSHIP", "RELATIONSHIP",
+                              "ProvidesThePath")
+    neo4j.create_node("FOREIGN IDENTIFIER ATTRIBUTE", "FOREIGN_IDENTIFIER_ATTRIBUTE")
+    neo4j.create_relationship("FOREIGN IDENTIFIER", "FOREIGN_IDENTIFIER", "FOREIGN IDENTIFIER ATTRIBUTE",
+                              "FOREIGN_IDENTIFIER_ATTRIBUTE", "IsMadeUpOf")
+    neo4j.create_relationship("ATTRIBUTE", "ATTRIBUTE", "FOREIGN IDENTIFIER ATTRIBUTE",
+                              "FOREIGN_IDENTIFIER_ATTRIBUTE", "DefinesForeignKeyRoleOf")
     neo4j.create_node("DOMAIN", "DOMAIN")
     neo4j.create_relationship("ATTRIBUTE", "ATTRIBUTE", "DOMAIN", "DOMAIN", "ConstrainsTheValuesOf")
     neo4j.create_relationship("DOMAIN", "DOMAIN", "ATTRIBUTE", "ATTRIBUTE", "HasTheSetOf")
     neo4j.create_node("ATTRIBUTE TYPE", "ATTRIBUTE_TYPE")
     neo4j.create_relationship("ATTRIBUTE TYPE", "ATTRIBUTE_TYPE", "DOMAIN", "DOMAIN", "ConstrainsTheGenericNatureOf")
-    neo4j.create_relationship("ATTRIBUTE TYPE", "ATTRIBUTE_TYPE", "ATTRIBUTE", "ATTRIBUTE", "ConstrainsTheGenericNatureOf")
+    neo4j.create_relationship("ATTRIBUTE TYPE", "ATTRIBUTE_TYPE", "ATTRIBUTE", "ATTRIBUTE",
+                              "ConstrainsTheGenericNatureOf")
     neo4j.create_node("IDENTIFIER", "IDENTIFIER")
     neo4j.create_relationship("ATTRIBUTE", "ATTRIBUTE", "IDENTIFIER", "IDENTIFIER", "FormsTheComponent")
     neo4j.create_relationship("ENTITY", "ENTITY", "IDENTIFIER", "IDENTIFIER", "IdentifiedBy")
     neo4j.create_node("KEY ATTRIBUTE", "KEY_ATTRIBUTE")
     neo4j.create_relationship("KEY ATTRIBUTE", "KEY_ATTRIBUTE", "ATTRIBUTE", "ATTRIBUTE", "IsAn")
     neo4j.create_relationship("IDENTIFIER", "IDENTIFIER", "KEY ATTRIBUTE", "KEY_ATTRIBUTE", "IsComposedOf")
+
+    neo4j.close()
+
+
+# create dmmm outline of chinook database
+# create_dmmm_outline()
 
 
 if __name__ == "__main__":

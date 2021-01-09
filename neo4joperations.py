@@ -24,20 +24,8 @@ class Neo4jOperations:
         else:
             return False  # node exists
 
-    def check_column_node(self, name, tableName, type):
-        query = """
-            MATCH (a:Column {name: '%s', table: '%s', type: '%s'})
-            RETURN (COUNT(a))
-            """ % (name, tableName, type)
-        results = self.session.run(query)
-
-        for result in results:
-            count = result[0]
-
-        if count == 0:
-            return True  # node does not exist
-        else:
-            return False  # node exists
+    def run_custom_query(self, query):
+        self.session.run(query)
 
     def create_node(self, name, nodeType):
         if self.check_node(name, nodeType):
@@ -50,16 +38,24 @@ class Neo4jOperations:
             print("Node is already existent")
             return False
 
-    def create_column_node(self, name, tableName, type):
-        if self.check_column_node(name, tableName, type):
-            query = """
-                    MERGE (a:Column {name: '%s', table: '%s', type: '%s'})
-                    """ % (name, tableName, type)
-            self.session.run(query)
-            return True
-        else:
-            print("Node is already existent")
-            return False
+    def create_attribute_node(self, name, attr_type, entity_name):
+        query = """
+                MERGE (a:ATTRIBUTE {name: '%s', attr_type: '%s', entity: '%s'})
+                """ % (name, attr_type, entity_name)
+        self.session.run(query)
+
+    def create_key_attribute_node(self, name, entity_name):
+        query = """
+                MERGE (a:KEY_ATTRIBUTE {name: '%s', entity: '%s'})
+                """ % (name, entity_name)
+        self.session.run(query)
+
+    def create_fia_node(self, name, from_entity, to_entity, from_attr, to_attr):
+        query = """
+                MERGE (a:FOREIGN_IDENTIFIER_ATTRIBUTE {name: '%s', from_entity: '%s', to_entity: '%s', from_attr: '%s', 
+                to_attr: '%s'})
+                """ % (name, from_entity, to_entity, from_attr, to_attr)
+        self.session.run(query)
 
     def create_relationship(self, fromName, fromNodeType, toName, toNodeType, relationName):
         query = """
@@ -67,20 +63,4 @@ class Neo4jOperations:
                 WHERE a.name='%s' AND b.name='%s'
                 MERGE  (a)-[:%s]->(b)
                 """ % (fromNodeType, toNodeType, fromName, toName, relationName)
-        self.session.run(query)
-
-    def create_relationship_table_to_column(self, fromName, fromNodeType, toName, toTableName, relationName):
-        query = """
-                MATCH (a:%s), (b:Column)
-                WHERE a.name='%s' AND b.name='%s' AND b.table='%s'
-                MERGE  (a)-[:%s]->(b)
-                """ % (fromNodeType, fromName, toName, toTableName, relationName)
-        self.session.run(query)
-
-    def create_relationship_column_to_column_fk(self, fromName, fromTableName, toName, toTableName, relationName):
-        query = """
-                MATCH (a:Column), (b:Column)
-                WHERE a.name='%s' AND a.table='%s' AND b.name='%s' AND b.table='%s'
-                MERGE  (a)-[:%s]->(b)
-                """ % (fromName, fromTableName, toName, toTableName, relationName)
         self.session.run(query)
