@@ -4,11 +4,11 @@ Takes an example database and extracts its table names, column names & types, an
 Converts relational database (RDBMS) to data management metamodel (DMMM) by using Neo4j.  
 
 ## Infrastructure
-* Python 3.5.2 for the backend implementation.
+* Python 3.8.5 for the backend implementation.
 * Qt 5.15.2 and QML for the User-Interface (UI) implementation.
 * PyQt5 for Python and Qt entegration.
 * SQLite 3.11.0 for database operations.
-* Neo4j 3.5.17 for graph database operations.
+* Neo4j 4.2.2 for graph database operations.
 
 ## Prerequisites
 ```
